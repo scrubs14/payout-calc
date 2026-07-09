@@ -161,6 +161,24 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
       </div>
     </div>
 
+
+    <div class="sec">Misc / Other Trade</div>
+    <div class="trade-card" id="miscCard">
+      <div class="trade-header" onclick="toggleTrade('misc')">
+        <div class="toggle" id="miscT"></div>
+        <div class="trade-name">🔧 Misc</div>
+        <div class="trade-rate">Custom cost vs charge</div>
+      </div>
+      <div class="trade-body">
+        <div class="inp-row">
+          <div class="fg"><label class="fl">What We Charge ($)</label><div class="iw"><span class="ip">$</span><input class="inp pp" type="number" id="mCharge" placeholder="0" oninput="calc()"></div></div>
+          <div class="fg"><label class="fl">Our Cost ($)</label><div class="iw"><span class="ip">$</span><input class="inp pp" type="number" id="mCost" placeholder="0" oninput="calc()"></div></div>
+        </div>
+        <div class="fg" style="margin-top:8px;"><label class="fl">Description</label><input class="inp" type="text" id="mDesc" placeholder="e.g. HVAC, permit, haul-off..." oninput="calc()"></div>
+        <div class="trade-sub"><span style="color:var(--dim)">Your cut</span><span class="tsv" id="mPre">—</span></div>
+      </div>
+    </div>
+
   </div>
 
   <div class="output-side">
@@ -183,7 +201,7 @@ const PN=['Low Pitch · 1 Story','Low Pitch · 2 Story','High Pitch · 1 Story',
 const GP=[6,7,6,7];
 const GN=['5" Gutters','6" Gutters','5" Downspouts','6" Downspouts'];
 const SP=300;
-let op=5,pi=0,gi=0,rOn=false,gOn=false,sOn=false;
+let op=5,pi=0,gi=0,rOn=false,gOn=false,sOn=false,mOn=false;
 
 function fmt(n){if(isNaN(n))return'—';return'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtS(n){return(n<0?'-$':'$')+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:0});}
@@ -195,7 +213,8 @@ function setGutter(i){gi=i;document.querySelectorAll('[data-gi]').forEach(b=>b.c
 function toggleTrade(t){
   if(t==='roof'){rOn=!rOn;document.getElementById('roofCard').classList.toggle('on',rOn);document.getElementById('roofT').classList.toggle('on',rOn);}
   else if(t==='gutter'){gOn=!gOn;document.getElementById('gutterCard').classList.toggle('on',gOn);document.getElementById('gutterT').classList.toggle('on',gOn);}
-  else{sOn=!sOn;document.getElementById('sidingCard').classList.toggle('on',sOn);document.getElementById('sidingT').classList.toggle('on',sOn);}
+  else if(t==='siding'){sOn=!sOn;document.getElementById('sidingCard').classList.toggle('on',sOn);document.getElementById('sidingT').classList.toggle('on',sOn);}
+  else{mOn=!mOn;document.getElementById('miscCard').classList.toggle('on',mOn);document.getElementById('miscT').classList.toggle('on',mOn);}
   calc();
 }
 
@@ -213,22 +232,29 @@ function calc(){
   const gC=parseFloat(document.getElementById('gC').value)||0;
   const sSq=parseFloat(document.getElementById('sSq').value)||0;
   const sC=parseFloat(document.getElementById('sC').value)||0;
+  const mCharge=parseFloat(document.getElementById('mCharge').value)||0;
+  const mCost=parseFloat(document.getElementById('mCost').value)||0;
+  const mDesc=document.getElementById('mDesc').value||'Misc';
 
   const r=rOn&&rSq>0&&rC>0?tc(PP[pi],rSq,rC):null;
   const g=gOn&&gLF>0&&gC>0?tc(GP[gi],gLF,gC):null;
   const s=sOn&&sSq>0&&sC>0?tc(SP,sSq,sC):null;
+  // Misc: gross = charge - cost - O&P, then 50/50
+  const mGross=mOn&&mCharge>0?(mCharge-mCost-(mCharge*(op/100))):0;
+  const m=mOn&&mCharge>0?{charge:mCharge,cost:mCost,opD:mCharge*(op/100),gross:mGross,cut:mGross*0.5}:null;
 
   document.getElementById('rPre').textContent=r?fmt(r.cut):'—';
   document.getElementById('gPre').textContent=g?fmt(g.cut):'—';
   document.getElementById('sPre').textContent=s?fmt(s.cut):'—';
+  document.getElementById('mPre').textContent=m?fmt(m.cut):'—';
 
-  const tC=(rOn&&rC>0?rC:0)+(gOn&&gC>0?gC:0)+(sOn&&sC>0?sC:0);
-  const tB=(r?r.build:0)+(g?g.build:0)+(s?s.build:0);
-  const tO=(r?r.opD:0)+(g?g.opD:0)+(s?s.opD:0);
-  const tG=(r?r.gross:0)+(g?g.gross:0)+(s?s.gross:0);
+  const tC=(rOn&&rC>0?rC:0)+(gOn&&gC>0?gC:0)+(sOn&&sC>0?sC:0)+(mOn&&mCharge>0?mCharge:0);
+  const tB=(r?r.build:0)+(g?g.build:0)+(s?s.build:0)+(m?m.cost:0);
+  const tO=(r?r.opD:0)+(g?g.opD:0)+(s?s.opD:0)+(m?m.opD:0);
+  const tG=(r?r.gross:0)+(g?g.gross:0)+(s?s.gross:0)+(m?m.gross:0);
   const tY=tG*0.5;
   const margin=tC>0?(tY/tC*100):0;
-  const has=r||g||s;
+  const has=r||g||s||m;
 
   if(!has){
     document.getElementById('payAmt').textContent='$0';
@@ -242,7 +268,7 @@ function calc(){
 
   document.getElementById('payAmt').textContent=fmtS(tY);
   document.getElementById('payAmt').className='payout-amount'+(tY<0?' neg':'');
-  const trades=[rOn&&rC>0?'Roof':null,gOn&&gC>0?'Gutters':null,sOn&&sC>0?'Siding':null].filter(Boolean);
+  const trades=[rOn&&rC>0?'Roof':null,gOn&&gC>0?'Gutters':null,sOn&&sC>0?'Siding':null,mOn&&mCharge>0?mDesc:null].filter(Boolean);
   document.getElementById('payLabel').textContent='Your Payout · 50% Split'+(trades.length>1?' · '+trades.join(' + '):'');
   document.getElementById('paySub').textContent=op+'% O&P · Contract: '+fmt(tC)+(margin>0?' · '+margin.toFixed(1)+'% margin':'');
 
@@ -292,14 +318,22 @@ function calc(){
     bd+=ro('Your Margin',margin.toFixed(1)+'%',margin>=20?'green':margin>=10?'gold':'red');
     if(rSq>0)bd+=ro('Profit Per Roof Square',fmt(tY/rSq)+'/sq','dim');
   }
+  if(m){
+    bd+='<div class="tsl" style="margin-top:10px;">🔧 '+mDesc+'</div>';
+    bd+=ro('Charge to Customer',fmt(m.charge));
+    bd+=ro('Our Cost',fmt(m.cost),'red');
+    bd+=ro('O&P Deduction ('+op+'%)','−'+fmt(m.opD),'red');
+    bd+=ro('Gross Profit',fmt(m.gross),m.gross>=0?'gold':'red');
+    bd+=ro('Your Cut (50%)',fmt(m.cut),'green');
+  }
   document.getElementById('bBody').innerHTML=bd;
 }
 
 function reset(){
-  rOn=false;gOn=false;sOn=false;
-  ['roofCard','gutterCard','sidingCard'].forEach(id=>{document.getElementById(id).classList.remove('on');});
-  ['roofT','gutterT','sidingT'].forEach(id=>{document.getElementById(id).classList.remove('on');});
-  ['rSq','rC','gLF','gC','sSq','sC'].forEach(id=>{document.getElementById(id).value='';});
+  rOn=false;gOn=false;sOn=false;mOn=false;
+  ['roofCard','gutterCard','sidingCard','miscCard'].forEach(id=>{document.getElementById(id).classList.remove('on');});
+  ['roofT','gutterT','sidingT','miscT'].forEach(id=>{document.getElementById(id).classList.remove('on');});
+  ['rSq','rC','gLF','gC','sSq','sC','mCharge','mCost','mDesc'].forEach(id=>{document.getElementById(id).value='';});
   setPitch(0);setGutter(0);setOP(5);calc();
 }
 setPitch(0);setGutter(0);calc();
