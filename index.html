@@ -138,7 +138,11 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
         <div class="pitch-btn" data-pi="4" onclick="setPitch(4)"><div class="pn">Metal</div><div class="pp2">$330.00</div></div>
       </div>
       <div class="inp-row">
-        <div><label class="fl">Squares</label><input class="inp" type="number" id="rSq" placeholder="28" oninput="calc()"></div>
+        <div>
+        <label class="fl">Squares</label>
+        <input class="inp" type="number" id="rSq" placeholder="28" oninput="calc()">
+        <div id="rTarget" style="font-size:11px;color:var(--gold);margin-top:5px;line-height:1.5;display:none;"></div>
+      </div>
         <div><label class="fl">Contract $</label><div class="iw"><span class="ip">$</span><input class="inp pp" type="number" id="rC" placeholder="0" oninput="calc()"></div></div>
       </div>
       <div class="trade-sub"><span style="color:var(--dim)">Your cut</span><span class="tsv" id="rPre">-</span></div>
@@ -261,6 +265,24 @@ function calc(){
   const sSq=parseFloat(document.getElementById('sSq').value)||0,sC=parseFloat(document.getElementById('sC').value)||0;
   const dBuild=dB*16;
   document.getElementById('dBuild').textContent=dB>0?f2(dBuild):'-';
+
+  // Target price for 20% payout on roof squares
+  const rTargetEl = document.getElementById('rTarget');
+  if(rSq > 0 && rOn) {
+    const buildRate = PP[pi];
+    const build = rSq * buildRate;
+    const opRate = op / 100;
+    // yourCut/contract = 0.20 → (contract - build - contract*opRate)*0.5/contract = 0.20
+    // 0.5 - build/(2*contract) - opRate/2 = 0.20
+    // contract = build / (1 - opRate - 0.40)
+    const target20 = build / (1 - opRate - 0.40);
+    const target25 = build / (1 - opRate - 0.50);
+    rTargetEl.style.display = 'block';
+    rTargetEl.innerHTML = '💡 To hit <strong style="color:var(--gold)">20%</strong> payout: charge <strong style="color:var(--white)">' + f2(target20) + '</strong><br>'
+      + '&nbsp;&nbsp;&nbsp;To hit <strong style="color:var(--green)">25%</strong> payout: charge <strong style="color:var(--white)">' + f2(target25) + '</strong>';
+  } else {
+    rTargetEl.style.display = 'none';
+  }
   const r=rOn&&rSq>0&&rC>0?tc(rSq*PP[pi],rC):null;
   const d=dOn&&dB>0&&dC>0?tc(dBuild,dC):null;
   const g=gOn&&gLF>0&&gC>0?tc(gLF*GP[gi],gC):null;
